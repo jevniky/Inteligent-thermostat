@@ -14,6 +14,7 @@ boolean A_set = false;
 boolean B_set = false;
 
 /*TEMP setup*/
+float setTemp = MIN_POS*0.5;
 // Data wire is plugged into port 2 on the Arduino
 #define ONE_WIRE_BUS 5
 // Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
@@ -33,3 +34,6 @@ EthernetClient ethClient;
 
 /* MQTT */
 PubSubClient mqttClient(ethClient);
+
+char tempBuff[10];
+float temperature = 0.0;

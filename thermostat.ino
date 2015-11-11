@@ -4,17 +4,15 @@
 #include <PubSubClient.h>
 #include "config.h"
 
-/*TEMP INIT*/
-float setTemp = MIN_POS*0.5;
 
 void setup() {
   pinMode(pinA, INPUT_PULLUP); // enabling pullups
-  pinMode(pinB, INPUT_PULLUP); 
+  pinMode(pinB, INPUT_PULLUP);
   pinMode(pinSW, INPUT_PULLUP);
 
-// encoder pin on interrupt 0 (pin 2)
+  // encoder pin on interrupt 0 (pin 2)
   attachInterrupt(0, doEncoderA, CHANGE);
-// encoder pin on interrupt 1 (pin 3)
+  // encoder pin on interrupt 1 (pin 3)
   attachInterrupt(1, doEncoderB, CHANGE);
 
   Serial.begin(9600);
@@ -24,25 +22,29 @@ void setup() {
 
   mqttClient.setServer("mqtt.polyrem.sk", 1883);
   mqttClient.setCallback(callback);
-  
+
   connectToEthernet();
   delay(1500);
 }
 
 // main loop, work is done by interrupt service routines, this one only prints stuff
-void loop() { 
+void loop() {
+  if (!mqttClient.connected()) {
+    reconnect();
+  }
+
   rotating = true;  // reset the debouncer
   //to protect from going over min & max values
-  if (encoderPos <= MIN_POS-1 ){
+  if (encoderPos <= MIN_POS - 1 ) {
     encoderPos = MIN_POS;
-    lastReportedPos = MIN_POS+1;
-  } else if (encoderPos >= MAX_POS+1){
+    lastReportedPos = MIN_POS + 1;
+  } else if (encoderPos >= MAX_POS + 1) {
     encoderPos = MAX_POS;
-    lastReportedPos = MAX_POS-1;
+    lastReportedPos = MAX_POS - 1;
   } else {
     if (lastReportedPos != encoderPos) { // Serial print
-      setTemp = encoderPos*0.5;
-      Serial.print("Set temperature: ");
+      setTemp = encoderPos * 0.5;
+      Serial.print("Set: ");
       Serial.println(setTemp);
       lastReportedPos = encoderPos;
     }
@@ -59,19 +61,25 @@ void loop() {
     //request temperature from sensors
     sensors.requestTemperatures();
     //print temperature out with my function
-    printTemperature(thermometer);
-  }
-  if (!mqttClient.connected()) {
-    reconnect();
+    //printTemperature(thermometer);
+    temperature = sensors.getTempC(thermometer);
+    Serial.print("Got: ");
+    //Serial.println(temperature);
+    dtostrf(temperature, 3, 2, tempBuff);
+    Serial.println(tempBuff);
+    if (mqttClient.publish("temperature", tempBuff)) {
+      Serial.println("published");
+    } else Serial.println("Not published");
+   
   }
   mqttClient.loop();
 }
 
 // Interrupt on A changing state
-void doEncoderA(){
+void doEncoderA() {
   if ( rotating ) delay (1);  // wait a little until the bouncing is done
-  // Test transition, did things really change? 
-  if( digitalRead(pinA) != A_set ) {  // debounce once more
+  // Test transition, did things really change?
+  if ( digitalRead(pinA) != A_set ) { // debounce once more
     A_set = !A_set;
     // adjust counter + if A leads B
     if ( A_set && !B_set ) encoderPos += 1;
@@ -79,24 +87,29 @@ void doEncoderA(){
   }
 }
 // Interrupt on B changing state, same as A above
-void doEncoderB(){
+void doEncoderB() {
   if ( rotating ) delay (1);
-  if( digitalRead(pinB) != B_set ) {
+  if ( digitalRead(pinB) != B_set ) {
     B_set = !B_set;
     //  adjust counter - 1 if B leads A
-    if( B_set && !A_set ) encoderPos -= 1;
+    if ( B_set && !A_set ) encoderPos -= 1;
     rotating = false;
   }
 }
 
 // function to print the temperature for a device
-void printTemperature(DeviceAddress deviceAddress) {
-  float temperature = sensors.getTempC(deviceAddress);
-  Serial.print("Got temperature: ");
-  Serial.println(temperature);
-  char* temp = (char)temperature;
-  mqttClient.publish("temperature",temp);
-}
+//void printTemperature(DeviceAddress deviceAddress) {
+//  float temperature = sensors.getTempC(deviceAddress);
+//  Serial.print("Got: ");
+//  //Serial.println(temperature);
+//  char tempBuff[10];
+//  dtostrf(temperature, 3, 2, tempBuff);
+//  Serial.println(tempBuff);
+//  if (mqttClient.publish("temperature", tempBuff)) {
+//    Serial.println("published");
+//  } else Serial.println("Not published");
+//  
+//}
 
 void connectToEthernet() {
   if (Ethernet.begin(mac) == 0) {
@@ -119,7 +132,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
   Serial.print("Message arrived [");
   Serial.print(topic);
   Serial.print("] ");
-  for (int i=0;i<length;i++) {
+  for (int i = 0; i < length; i++) {
     Serial.print((char)payload[i]);
   }
   Serial.println();
@@ -132,15 +145,15 @@ void reconnect() {
     if (mqttClient.connect("arduinoClient")) {
       Serial.println("connected");
       // Once connected, publish an announcement...
-      mqttClient.publish("outTopic","hello world");
+      //mqttClient.publish("outTopic", "hello world");
       // ... and resubscribe
       mqttClient.subscribe("inTopic");
     } else {
       Serial.print("failed, rc=");
       Serial.print(mqttClient.state());
-      Serial.println(" try again in 5 seconds");
-      // Wait 5 seconds before retrying
-      delay(5000);
+      Serial.println(" try again in 3 seconds");
+      // Wait 3 seconds before retrying
+      delay(3000);
     }
   }
 }
