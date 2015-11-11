@@ -46,6 +46,9 @@ void loop() {
       setTemp = encoderPos * 0.5;
       Serial.print("Set: ");
       Serial.println(setTemp);
+      dtostrf(setTemp, 3, 2, setTempBuff);
+      mqttClient.publish("temperature", setTempBuff);
+      mqttClient.publish("setTemp", setTempBuff);
       lastReportedPos = encoderPos;
     }
   }
@@ -67,10 +70,8 @@ void loop() {
     //Serial.println(temperature);
     dtostrf(temperature, 3, 2, tempBuff);
     Serial.println(tempBuff);
-    if (mqttClient.publish("temperature", tempBuff)) {
-      Serial.println("published");
-    } else Serial.println("Not published");
-   
+    mqttClient.publish("temperature", tempBuff);
+    editTemperature(setTemp,temperature,1);
   }
   mqttClient.loop();
 }
@@ -156,4 +157,11 @@ void reconnect() {
       delay(3000);
     }
   }
+}
+void editTemperature(float set, float actual, int limit) {
+  if (actual > set+limit) {
+    Serial.println("Need to cool...");
+  } else if (actual < set-limit) { 
+    Serial.println("Need to heat...");
+  } else Serial.println("Temperature is OK");
 }
