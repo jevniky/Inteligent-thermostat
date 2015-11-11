@@ -10,6 +10,10 @@ void setup() {
   pinMode(pinB, INPUT_PULLUP);
   pinMode(pinSW, INPUT_PULLUP);
 
+  //set up output pins
+  pinMode(heatPin,OUTPUT);
+  pinMode(coolPin,OUTPUT);
+
   // encoder pin on interrupt 0 (pin 2)
   attachInterrupt(0, doEncoderA, CHANGE);
   // encoder pin on interrupt 1 (pin 3)
@@ -98,20 +102,6 @@ void doEncoderB() {
   }
 }
 
-// function to print the temperature for a device
-//void printTemperature(DeviceAddress deviceAddress) {
-//  float temperature = sensors.getTempC(deviceAddress);
-//  Serial.print("Got: ");
-//  //Serial.println(temperature);
-//  char tempBuff[10];
-//  dtostrf(temperature, 3, 2, tempBuff);
-//  Serial.println(tempBuff);
-//  if (mqttClient.publish("temperature", tempBuff)) {
-//    Serial.println("published");
-//  } else Serial.println("Not published");
-//  
-//}
-
 void connectToEthernet() {
   if (Ethernet.begin(mac) == 0) {
     Serial.println("Failed to configure Ethernet using DHCP");
@@ -161,7 +151,15 @@ void reconnect() {
 void editTemperature(float set, float actual, int limit) {
   if (actual > set+limit) {
     Serial.println("Need to cool...");
+    digitalWrite(heatPin,LOW);
+    digitalWrite(coolPin,HIGH);
   } else if (actual < set-limit) { 
     Serial.println("Need to heat...");
-  } else Serial.println("Temperature is OK");
+    digitalWrite(coolPin,LOW);
+    digitalWrite(heatPin,HIGH);
+  } else {
+    Serial.println("Temperature is OK");
+    digitalWrite(heatPin,LOW);
+    digitalWrite(coolPin,LOW);
+  }
 }

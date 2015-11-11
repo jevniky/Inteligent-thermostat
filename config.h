@@ -38,3 +38,7 @@ PubSubClient mqttClient(ethClient);
 char tempBuff[10];
 char setTempBuff[10];
 float temperature = 0.0;
+
+/*RELAYS*/
+int heatPin = 8;
+int coolPin = 9;
