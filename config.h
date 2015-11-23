@@ -49,5 +49,7 @@ PubSubClient mqttClient(ethClient);
 char tempBuff[10];
 char setTempBuff[10];
 
-char payload1;
+/* LCD */
+// initialize the library with the numbers of the interface pins
+LiquidCrystal lcd(16, 17, 18, 19, 20, 21);
 
