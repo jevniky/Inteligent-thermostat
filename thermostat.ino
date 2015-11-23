@@ -83,7 +83,7 @@ void loop() {
         dtostrf(temperature, 3, 2, tempBuff); // create a string from float value
         mqttClient.publish("temperature", tempBuff); // client.publish(topic,message)
         // my function to edit temperature:
-        editTemperature(setTemp,temperature,1);
+        editTemperature(setTemp,temperature,0.5);
         // the last parameter is precision of editing
     }
     mqttClient.loop();
@@ -109,7 +109,7 @@ void doEncoderB() {
         rotating = false;
     }
 }
-void editTemperature(float set, float actual, int limit) {
+void editTemperature(float set, float actual, float limit) {
     if (actual > set+limit) {
         Serial.println("Need to cool...");
         digitalWrite(heatPin,LOW);
@@ -146,6 +146,7 @@ void reconnect() {
         Serial.print("Attempting MQTT connection...");
         // Attempt to connect
         if (mqttClient.connect("arduinoClient")) {
+          mqttClient.subscribe("setTempWeb");
             Serial.println("connected");
         } else {
             Serial.print("failed, rc=");
@@ -156,15 +157,18 @@ void reconnect() {
         }
     }
 }
+
 void callback(char* topic, byte* payload, unsigned int length) {
-    for (int i = 0; i < length; i++) {
-        if (i==0) setTemp = setTemp + 10*((int)payload[i]-48);
-        if (i==1) setTemp = setTemp + ((int)payload[i]-48);
-        if (i==3) setTemp = setTemp + 0.1*((int)payload[i]-48);
-        if (i==4) setTemp = setTemp + 0.01*((int)payload[i]-48);
+float setTempWeb = 0.0;
+for (int i = 0; i < length; i++) {
+        if (i==0) setTempWeb = setTempWeb + 10*((int)payload[i]-48);
+        if (i==1) setTempWeb = setTempWeb + ((int)payload[i]-48);
+        if (i==3) setTempWeb = setTempWeb + 0.1*((int)payload[i]-48);
+        if (i==4) setTempWeb = setTempWeb + 0.01*((int)payload[i]-48);
     }
     Serial.print("Set temp from callback: ");
-    Serial.println(setTemp);
-    encoderPos = setTemp*2;
+    Serial.println(setTempWeb);
+    encoderPos = setTempWeb*2;
     lastReportedPos = encoderPos;
+    setTemp = setTempWeb;
 }
